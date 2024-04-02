@@ -1,0 +1,362 @@
+Lab cycle 10
+Validity of variable declaration:
+Yaac:
+%{
+#include <stdio.h>
+int yylex();
+void yyerror(const char *s);
+%}
+
+%token VARIABLE
+
+%%
+
+input: VARIABLE { printf("Valid variable: %s\n", $1); }
+     | .          { printf("Invalid variable: %s\n", yytext); }
+     ;
+
+%%
+
+void yyerror(const char *s) {
+    fprintf(stderr, "%s\n", s);
+}
+
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s \"variable\"\n", argv[0]);
+        return 1;
+    }
+
+    yy_scan_string(argv[1]);
+    yyparse();
+
+    return 0;
+}
+
+Lex:
+%{
+#include "variable_checker.tab.h"
+%}
+
+%%
+[a-zA-Z][a-zA-Z0-9]*    { return VARIABLE; }
+.                        ;
+%%
+
+int yywrap() {
+    return 1;
+}
+Infix to postfix:
+Yaac:
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+#define MAX_SIZE 100
+
+/* Stack data structure */
+typedef struct {
+    char items[MAX_SIZE];
+    int top;
+} Stack;
+
+/* Function prototypes */
+void push(Stack *s, char c);
+char pop(Stack *s);
+char peek(Stack *s);
+int precedence(char op);
+
+Stack operator_stack; // Stack to hold operators
+
+%}
+
+%union {
+    char op;
+}
+
+%token <op> ADD SUB MUL DIV LPAREN RPAREN
+%token <op> NUMBER VARIABLE
+
+%left ADD SUB
+%left MUL DIV
+
+%%
+
+expression: /* Empty production */
+            | expression term ADD      { printf("%c ", $3); }
+            | expression term SUB      { printf("%c ", $3); }
+            | term                     { printf("%c ", $1); }
+            ;
+
+term:       term factor MUL          { printf("%c ", $3); }
+            | term factor DIV        { printf("%c ", $3); }
+            | factor                 { printf("%c ", $1); }
+            ;
+
+factor:     NUMBER                    { printf("%s ", $1); }
+            | VARIABLE                { printf("%s ", $1); }
+            | LPAREN expression RPAREN { }
+            ;
+
+%%
+
+/* Function to push onto stack */
+void push(Stack *s, char c) {
+    if (s->top == MAX_SIZE - 1) {
+        fprintf(stderr, "Stack overflow\n");
+        exit(1);
+    }
+    s->top++;
+    s->items[s->top] = c;
+}
+
+/* Function to pop from stack */
+char pop(Stack *s) {
+    if (s->top == -1) {
+        fprintf(stderr, "Stack underflow\n");
+        exit(1);
+    }
+    char c = s->items[s->top];
+    s->top--;
+    return c;
+}
+
+/* Function to peek the top of stack */
+char peek(Stack *s) {
+    if (s->top == -1) {
+        fprintf(stderr, "Stack underflow\n");
+        exit(1);
+    }
+    return s->items[s->top];
+}
+
+/* Function to get precedence of operator */
+int precedence(char op) {
+    switch(op) {
+        case '+':
+        case '-':
+            return 1;
+        case '*':
+        case '/':
+            return 2;
+        default:
+            return 0;
+    }
+}
+
+int yylex(void); // Forward declaration
+
+/* Main Program */
+int main() {
+    operator_stack.top = -1; // Initialize stack
+    yyparse(); // Start parsing
+    return 0;
+}
+
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+}
+
+Lex:
+%{
+#include "y.tab.h"
+%}
+
+%%
+"+"             { return ADD; }
+"-"             { return SUB; }
+"*"             { return MUL; }
+"/"             { return DIV; }
+"("             { return LPAREN; }
+")"             { return RPAREN; }
+[0-9]+          { yylval.op = *yytext; return NUMBER; }
+[a-zA-Z][a-zA-Z0-9]* { yylval.op = *yytext; return VARIABLE; }
+[ \t\n]         ; /* Ignore whitespace */
+.               { fprintf(stderr, "Error: Invalid character '%s'\n", yytext); exit(1); }
+%%
+
+int yywrap(void) {
+    return 1;
+}
+
+printing three address staements write it suing yaac for unambiguious grammer
+yaac:
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
+%}
+
+%token NUMBER
+%token VARIABLE
+%token PLUS MINUS TIMES DIVIDE
+%token ASSIGNMENT
+
+%%
+
+program:
+    statements              { printf("Generated three-address statements:\n%s", $1); }
+    ;
+
+statements:
+    statement               { $$ = $1; }
+    | statements statement   { $$ = strcat($1, $2); }
+    ;
+
+statement:
+    expression ASSIGNMENT NUMBER ';'     { $$ = generate_statement($1, $3); }
+    ;
+
+expression:
+    term                        { $$ = $1; }
+    | expression PLUS term       { $$ = strcat($1, $3); }
+    | expression MINUS term      { $$ = strcat($1, $3); }
+    ;
+
+term:
+    factor                      { $$ = $1; }
+    | term TIMES factor         { $$ = strcat($1, $3); }
+    | term DIVIDE factor        { $$ = strcat($1, $3); }
+    ;
+
+factor:
+    NUMBER                      { $$ = strdup($1); }
+    | VARIABLE                  { $$ = strdup($1); }
+    | '(' expression ')'        { $$ = $2; }
+    ;
+
+%%
+
+char* generate_statement(char* variable, char* value) {
+    char* statement = malloc(strlen(variable) + strlen(value) + 20); // Allocating enough space
+    sprintf(statement, "%s = %s;\n", variable, value); // Creating the statement
+    return statement;
+}
+
+int yylex(void);
+void yyerror(const char *s);
+
+int main() {
+    yyparse();
+    return 0;
+}
+
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+}
+Lex:
+%{
+#include "y.tab.h"
+%}
+
+%%
+[0-9]+                  { yylval = strdup(yytext); return NUMBER; }
+[a-zA-Z][a-zA-Z0-9]*    { yylval = strdup(yytext); return VARIABLE; }
+"+"                     { return PLUS; }
+"-"                     { return MINUS; }
+"*"                     { return TIMES; }
+"/"                     { return DIVIDE; }
+"="                     { return ASSIGNMENT; }
+";"                     { return ';'; }
+"("                     { return '('; }
+")"                     { return ')'; }
+[ \t\n]                 ; // Ignore whitespace
+.                       { fprintf(stderr, "Invalid character: %s\n", yytext); exit(1); }
+%%
+
+int yywrap(void) {
+    return 1;
+}
+
+printing three address staements write it suing yaac for ambiguious grammer:
+yaac:
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+%}
+
+%token NUMBER
+%token VARIABLE
+%left '+' '-'
+%left '*' '/'
+
+%%
+
+program:
+    statements              { printf("Generated three-address statements:\n%s", $1); }
+    ;
+
+statements:
+    statement               { $$ = $1; }
+    | statements statement   { $$ = strcat($1, $2); }
+    ;
+
+statement:
+    expression ';'          { $$ = $1; }
+    ;
+
+expression:
+    expression '+' term     { $$ = generate_temporary($1, $3, "+"); }
+    | expression '-' term   { $$ = generate_temporary($1, $3, "-"); }
+    | term                  { $$ = $1; }
+    ;
+
+term:
+    term '*' factor         { $$ = generate_temporary($1, $3, "*"); }
+    | term '/' factor       { $$ = generate_temporary($1, $3, "/"); }
+    | factor                { $$ = $1; }
+    ;
+
+factor:
+    NUMBER                  { $$ = strdup($1); }
+    | VARIABLE              { $$ = strdup($1); }
+    | '(' expression ')'    { $$ = $2; }
+    ;
+
+%%
+
+char* generate_temporary(char* left, char* right, char* op) {
+    char* temp = malloc(strlen(left) + strlen(right) + 20); // Allocating enough space
+    sprintf(temp, "t%d = %s %s %s;\n", rand(), left, op, right); // Creating the temporary
+    return temp;
+}
+
+int yylex(void);
+void yyerror(const char *s);
+
+int main() {
+    yyparse();
+    return 0;
+}
+
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+}
+
+Lex:
+%{
+#include "y.tab.h"
+%}
+
+%%
+[0-9]+                  { yylval = strdup(yytext); return NUMBER; }
+[a-zA-Z][a-zA-Z0-9]*    { yylval = strdup(yytext); return VARIABLE; }
+"+"                     { return '+'; }
+"-"                     { return '-'; }
+"*"                     { return '*'; }
+"/"                     { return '/'; }
+"("                     { return '('; }
+")"                     { return ')'; }
+";"                     { return ';'; }
+[ \t\n]                 ; // Ignore whitespace
+.                       { fprintf(stderr, "Invalid character: %s\n", yytext); exit(1); }
+%%
+
+int yywrap(void) {
+    return 1;
+}
