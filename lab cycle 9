@@ -1,0 +1,244 @@
+Lab cycle 9:
+Valid string or not:
+Yaac:
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+%}
+
+%token VALIDSTRING
+
+%%
+
+program:
+    valid_string    { printf("Valid string: %s\n", $1); }
+    | .             { printf("Invalid string: %s\n", yytext); }
+    ;
+
+valid_string:
+    VALIDSTRING     { $$ = $1; }
+    ;
+
+%%
+
+int yylex(void);
+void yyerror(const char *s);
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s \"string\"\n", argv[0]);
+        return 1;
+    }
+
+    yy_scan_string(argv[1]);
+    yyparse();
+
+    return 0;
+}
+
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+}
+Lex:
+%{
+#include "y.tab.h"
+%}
+
+%%
+[a-zA-Z]+[a-zA-Z0-9]*   { yylval = strdup(yytext); return VALIDSTRING; }
+.                       { return yytext[0]; }
+%%
+
+int yywrap(void) {
+    return 1;
+}
+    
+
+Computing arithematic expression for unabiguious grammer:
+YAAC:
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+%}
+
+%token NUMBER
+
+%%
+
+input: expr { printf("Result: %f\n", $1); }
+     ;
+
+expr: term
+    | expr '+' term { $$ = $1 + $3; }
+    | expr '-' term { $$ = $1 - $3; }
+    ;
+
+term: factor
+    | term '*' factor { $$ = $1 * $3; }
+    | term '/' factor { $$ = $1 / $3; }
+    ;
+
+factor: NUMBER { $$ = $1; }
+       | '(' expr ')' { $$ = $2; }
+       ;
+
+%%
+
+int yylex(void);
+void yyerror(const char *s);
+
+int main() {
+    yyparse();
+    return 0;
+}
+
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+}
+ 
+Lex:
+%{
+#include "y.tab.h"
+%}
+
+%%
+
+[0-9]+(\.[0-9]+)?       { yylval = atof(yytext); return NUMBER; }
+"+"                     { return '+'; }
+"-"                     { return '-'; }
+"*"                     { return '*'; }
+"/"                     { return '/'; }
+"("                     { return '('; }
+")"                     { return ')'; }
+[ \t\n]                 ; /* Ignore whitespace */
+.                       { fprintf(stderr, "Error: Invalid character '%s'\n", yytext); exit(1); }
+%%
+
+int yywrap(void) {
+    return 1;
+}
+
+Validity for ambiguous grammar:
+
+YACC:
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+%}
+
+%token VALIDSTRING
+
+%%
+
+program:
+    valid_string    { printf("Valid string: %s\n", $1); }
+    | .             { printf("Invalid string: %s\n", yytext); }
+    ;
+
+valid_string:
+    VALIDSTRING     { $$ = $1; }
+    ;
+
+%%
+
+int yylex(void);
+void yyerror(const char *s);
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s \"string\"\n", argv[0]);
+        return 1;
+    }
+
+    yy_scan_string(argv[1]);
+    yyparse();
+
+    return 0;
+}
+
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+} 
+Lex:
+%{
+#include "y.tab.h"
+%}
+
+%%
+[a-zA-Z]+[a-zA-Z0-9]*   { yylval = strdup(yytext); return VALIDSTRING; }
+.                       { return yytext[0]; }
+%%
+
+int yywrap(void) {
+    return 1;
+}
+
+Computing expression for ambiguious grammer:
+YACC:
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+%}
+
+%token NUMBER
+
+%%
+
+input: expr { printf("Result: %f\n", $1); }
+     ;
+
+expr: term
+    | expr '+' term { $$ = $1 + $3; }
+    | expr '-' term { $$ = $1 - $3; }
+    ;
+
+term: factor
+    | term '*' factor { $$ = $1 * $3; }
+    | term '/' factor { $$ = $1 / $3; }
+    ;
+
+factor: NUMBER { $$ = $1; }
+       | '(' expr ')' { $$ = $2; }
+       ;
+
+%%
+
+int yylex(void);
+void yyerror(const char *s);
+
+int main() {
+    yyparse();
+    return 0;
+}
+
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+}
+
+Lex: %{
+#include "y.tab.h"
+%}
+
+%%
+
+[0-9]+(\.[0-9]+)?       { yylval = atof(yytext); return NUMBER; }
+"+"                     { return '+'; }
+"-"                     { return '-'; }
+"*"                     { return '*'; }
+"/"                     { return '/'; }
+"("                     { return '('; }
+")"                     { return ')'; }
+[ \t\n]                 ; /* Ignore whitespace */
+.                       { fprintf(stderr, "Error: Invalid character '%s'\n", yytext); exit(1); }
+%%
+
+int yywrap(void) {
+    return 1;
+} 
+
+
